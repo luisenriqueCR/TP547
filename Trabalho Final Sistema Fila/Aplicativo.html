@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Sistema de Fila Adaptativo</title>
+    
+    <!-- Biblioteca Chart.js para criação de gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fontes Google para melhor tipografia -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ==================== ESTILOS CSS ==================== -->
+    <style>
+        /* Variáveis CSS para cores e configurações globais */
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #E91E63;
+            --fast-mode-color: #10B981;
+            --slow-mode-color: #3B82F6;
+            --reject-color: #EF4444;
+            --bg-color: #FFFFFF;
+            --text-color: #1F2937;
+            --border-color: #E5E7EB;
+        }
+        :root {
+            --primary-color: #6D28D9; /* Roxo Vibrante */
+            --secondary-color: #EC4899; /* Rosa/Magenta */
+            --bg-color: #98baab; /* Cinza muito claro */
+            --text-color: #111827; /* Cinza escuro */
+            --fast-mode-color: #10B981; /* Verde Esmeralda */
+            --slow-mode-color: #3B82F6; /* Azul */
+            --reject-color: #EF4444; /* Vermelho */
+            --border-color: #E5E7EB;
+            --font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5faf6 0%, #c3cfe2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 98%;
+            max-width: 1600px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-color);
+            margin-bottom: 30px;
+            font-weight: 700;
+            font-size: 2.5rem;
+        }
+        h4 {
+            text-align: center;
+            color: var(--text-color);
+             margin-bottom: 30px;
+            font-weight: 700;
+            font-size: 1.6rem;
+        }
+        p {
+            text-align: center;
+            color: var(--text-color);
+             margin-bottom: 30px;
+            font-weight: 700;
+            font-size: 1.6rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 30px;
+            flex-grow: 1;
+        }
+        
+        .left-panel, .right-panel { display: flex; flex-direction: column; gap: 20px; }
+        .controls-section, .stats-section, .guide-section {
+            background: #FFFFFF;
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 20px; }
+        .control-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .control-group label { font-weight: 600; color: #6B7280; font-size: 13px; }
+        .control-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; width: 80px; text-align: center; font-weight: 600; font-size: 16px; transition: all 0.2s; }
+        .control-group input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.3); }
+
+        .simulation-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-secondary { background: #F3F4F6; color: #374151; }
+        .btn-danger { background: var(--reject-color); color: white; }
+        .btn-stop { background: #F59E0B; color: white; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08); }
+        .btn-stop:hover:not(:disabled) { background: #D97706; transform: translateY(-2px); box-shadow: 0 7px 14px rgba(245, 158, 11, 0.3); }
+        .btn:disabled { background-color: #D1D5DB; cursor: not-allowed; }
+        
+        .diagram-container { position: relative; width: 100%; flex-grow: 1; min-height: 400px; border: 1px solid var(--border-color); border-radius: 16px; background-color: #FFF; overflow: hidden; background-image: radial-gradient(#E5E7EB 1px, transparent 1px); background-size: 20px 20px; }
+        
+        .arrival-area, .exit-area { position: absolute; top: 30%; transform: translateY(-50%); text-align:center; }
+        /* ==================== ESTILOS DE LAYOUT PRINCIPAL ==================== */
+        
+        /* Área de chegada dos pacotes (lado esquerdo) */
+        .arrival-area { left: 10%; transform: translateX(-50%); }
+        
+        /* Área de saída dos pacotes (lado direito) */
+        .exit-area { right: 10%; transform: translateX(50%);}
+        
+        /* Área da fila - onde os pacotes aguardam atendimento */
+        .queue-area { 
+            position: absolute; 
+            top: 30%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            width: 60%; 
+            height: 60px; 
+            border: 2px dashed #9CA3AF; 
+            border-radius: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            padding: 0 10px; 
+        }
+        
+        /* Slots individuais da fila */
+        .queue-slot { 
+            width: 40px; 
+            height: 40px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 5px; 
+            background-color: var(--bg-color); 
+        }
+        
+        /* ==================== ESTILOS DOS SERVIDORES ==================== */
+        
+        /* Container wrapper para cada servidor */
+        .server-wrapper { 
+            position: absolute; 
+            width: 100px; 
+            height: 100px; 
+            bottom: 10%; 
+        }
+        
+        /* Posicionamento específico do servidor 1 (esquerda) */
+        #server1-wrapper { 
+            left: 35%; 
+            transform: translateX(-50%); 
+        }
+        
+        /* Posicionamento específico do servidor 2 (direita) */
+        #server2-wrapper { 
+            right: 35%; 
+            transform: translateX(50%); 
+        }
+
+        /* Container do SVG do servidor */
+        .server-svg-container { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+        }
+        
+        /* SVG do servidor com transições suaves */
+        .server-svg { 
+            width: 100%; 
+            height: 100%; 
+            transition: all 0.3s ease; 
+        }
+        
+        /* Barra de progresso circular do servidor */
+        .server-progress { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            transform: rotate(-90deg); 
+        }
+        
+        /* Círculo da barra de progresso */
+        .server-progress-circle { 
+            stroke-dasharray: 251.2; 
+            stroke-dashoffset: 251.2; 
+            transition: stroke-dashoffset 0.5s linear; 
+        }
+        
+        /* Corpo do servidor */
+        .server-body { 
+            transition: fill 0.3s ease; 
+        }
+        
+        /* Cor do servidor em modo lento */
+        .server-svg.slow-mode .server-body { 
+            fill: var(--slow-mode-color); 
+        }
+        
+        /* Cor do servidor em modo rápido */
+        .server-svg.fast-mode .server-body { 
+            fill: var(--fast-mode-color); 
+        }
+        /* ==================== ESTILOS DOS PACOTES E ELEMENTOS VISUAIS ==================== */
+        
+        /* Estilo dos pacotes (clientes) que transitam pelo sistema */
+        .packet { 
+            width: 35px; 
+            height: 35px; 
+            background: linear-gradient(135deg, var(--secondary-color), #f472b6); 
+            border-radius: 8px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            color: white; 
+            font-size: 12px; 
+            font-weight: 600; 
+            position: absolute; 
+            transition: all 0.5s ease-in-out; 
+            z-index: 10; 
+            border: 2px solid white; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        
+        /* Rótulo do cliente */
+        .client-label { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: #A0AEC0; 
+        }
+        
+        /* ==================== ESTILOS DA SEÇÃO DE ESTATÍSTICAS ==================== */
+        
+        /* Título das seções de estatísticas */
+        .stats-section h3 { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            color: var(--primary-color);
+        }
+        
+        /* Item individual de estatística */
+        .stat-item { 
+            display: grid; 
+            grid-template-columns: 30px 1fr auto; 
+            align-items: center; 
+            gap: 15px; 
+            margin-bottom: 10px; 
+            padding: 12px; 
+            border-radius: 8px; 
+            transition: background-color 0.3s, border-color 0.3s; 
+            border: 1px solid transparent; 
+        }
+        
+        /* Efeito hover nos itens de estatística */
+        .stat-item:hover { 
+            background-color: #F9FAFB; 
+            border-color: var(--border-color); 
+        }
+        
+        /* Ícone das estatísticas */
+        .stat-icon { 
+            font-size: 20px; 
+            text-align: center; 
+            color: var(--primary-color);
+        }
+        
+        /* Rótulo da estatística */
+        .stat-label { 
+            font-weight: 500; 
+            color: #6B7280; 
+        }
+        
+        /* Valor da estatística */
+        .stat-value { 
+            font-weight: 700; 
+            color: var(--text-color); 
+            justify-self: end; 
+            font-size: 1.1em; 
+        }
+        
+        /* Container do gráfico */
+        #chart-container { 
+            display: none; 
+            margin-top: 20px; 
+            height: 220px; 
+        }
+        .guide-section ul { padding-left: 20px; max-height: 200px; overflow-y: auto; }
+        .guide-section li { margin-bottom: 12px; color: #4A5568; line-height: 1.5; }
+        .guide-section li.highlight-event { font-weight: 600; color: var(--primary-color); background-color: #F5F3FF; padding: 5px; border-radius: 5px;}
+        .guide-section h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+
+        /* Scenario Guide Styles */
+        .scenario-guide {
+            background: #FFFFFF;
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .scenario-guide h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .scenario-card {
+            background: #F8FAFC;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .scenario-card:hover {
+            border-color: var(--primary-color);
+            background: #F5F3FF;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.15);
+        }
+        .scenario-card.active {
+            border-color: var(--primary-color);
+            background: #F5F3FF;
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.2);
+        }
+        .scenario-title {
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .scenario-description {
+            color: #6B7280;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+        .scenario-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .scenario-btn:hover {
+            background: #5B21B6;
+            transform: translateY(-1px);
+        }
+        .scenario-params {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.6); z-index: 99; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: fadeIn 0.3s ease; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-content h3 { margin-top: 0; color: var(--text-color); }
+        .modal-content p { color: #6B7280; }
+        .modal-content input { width: 100px; padding: 10px; font-size: 18px; text-align: center; margin: 20px 0; border: 1px solid var(--border-color); border-radius: 8px; }
+        .modal-buttons { display: flex; gap: 15px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Results Dashboard Styles */
+        .results-dashboard {
+            display: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 30px 0;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            animation: slideInUp 0.6s ease-out;
+        }
+        .results-dashboard.active {
+            display: block;
+        }
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .results-header h3 {
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .results-summary {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .results-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .results-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .results-section h4 {
+            color: white;
+            margin: 0 0 20px 0;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+        }
+        .metric-value {
+            font-weight: 700;
+            color: white;
+            font-size: 1.1rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .metric-value.positive {
+            color: #50E3C2;
+        }
+        .metric-value.negative {
+            color: #FF6B6B;
+        }
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .chart-wrapper {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: 350px;
+            transition: all 0.3s ease;
+        }
+        .chart-wrapper:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .chart-title {
+            text-align: center;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .performance-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .performance-indicator.excellent {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--fast-mode-color);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+        .performance-indicator.good {
+            background: rgba(59, 130, 246, 0.2);
+            border: 2px solid var(--slow-mode-color);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        .performance-indicator.warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 2px solid #F59E0B;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+        .performance-indicator.critical {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--reject-color);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        .performance-icon {
+            font-size: 28px;
+        }
+        .performance-text {
+            flex: 1;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Animations for full queue, congestion, and packet rejection */
+        .packet.rejected { 
+            background: linear-gradient(135deg, var(--reject-color), #f87171); 
+            animation: rejectPulse 0.8s ease-out forwards;
+            transform: scale(1.2);
+        }
+        
+        /* Queue animations */
+        .queue-area.full { 
+            border-color: var(--reject-color); 
+            background-color: rgba(239, 68, 68, 0.05);
+            animation: queueFullPulse 1s ease-in-out infinite;
+        }
+        .queue-area.congested { 
+            border-color: #F59E0B; 
+            background-color: rgba(245, 158, 11, 0.05);
+            animation: queueCongestedPulse 1.5s ease-in-out infinite;
+        }
+        
+        /* Rejection zone animation */
+        .rejection-zone {
+            position: absolute;
+            top: 10%;
+            right: 15%;
+            width: 80px;
+            height: 80px;
+            border: 3px dashed var(--reject-color);
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--reject-color);
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+            background: rgba(239, 68, 68, 0.1);
+            animation: rejectZonePulse 0.5s ease-out;
+        }
+        .rejection-zone.active {
+            display: flex;
+        }
+        
+        /* Keyframe animations */
+        @keyframes rejectPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes queueFullPulse {
+            0%, 100% { border-color: var(--reject-color); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { border-color: #DC2626; box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
+        }
+        @keyframes queueCongestedPulse {
+            0%, 100% { border-color: #F59E0B; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { border-color: #D97706; box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.1); }
+        }
+        @keyframes rejectZonePulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simulador de Fila Adaptativo</h1>
+        <h4>Luis Enrique Cardozo Ramirez - David Fabian Tavera Gutierrez </h4>
+
+        <!-- Scenario Guide Section -->
+        <div class="scenario-guide">
+            <h2>🎯 Guia de Cenários</h2>
+            <div class="scenarios-grid">
+                <div class="scenario-card" data-scenario="low-load">
+                    <div class="scenario-params">λ=2, μ₁=2.5, μ₂=8, m=4, J=5</div>
+                    <div class="scenario-title">Cenário 1: Carga Baixa</div>
+                    <div class="scenario-description">Demonstra o sistema em condições ideais. Observe como a fila raramente se forma e o sistema permanece em modo lento.</div>
+                    <button class="scenario-btn">Configurar</button>
+                </div>
+                
+                <div class="scenario-card" data-scenario="overload">
+                    <div class="scenario-params">λ=6, μ₁=2, μ₂=5, m=3, J=4</div>
+                    <div class="scenario-title">Cenário 2: Sobrecarga</div>
+                    <div class="scenario-description">Mostra o colapso de um sistema fixo (não adaptativo) sob alta demanda. Observe a fila longa e os pacotes rejeitados.</div>
+                    <button class="scenario-btn">Configurar</button>
+                </div>
+                
+                <div class="scenario-card" data-scenario="adaptive">
+                    <div class="scenario-params">λ=6, μ₁=2, μ₂=8, m=3, J=4</div>
+                    <div class="scenario-title">Cenário 3: A Solução Adaptativa</div>
+                    <div class="scenario-description">Com os mesmos parâmetros de sobrecarga, ative o modo adaptativo. Veja como o sistema se recupera.</div>
+                    <button class="scenario-btn">Configurar</button>
+                </div>
+                
+                <div class="scenario-card" data-scenario="distribution">
+                    <div class="scenario-params">λ=4, μ₁=3, μ₂=7, m=2, J=6</div>
+                    <div class="scenario-title">Cenário 4: Impacto da Distribuição</div>
+                    <div class="scenario-description">Compare o sistema M/M/2 (Exponencial) com um M/D/2 (Determinista). Execute a análise para ver a diferença na variabilidade.</div>
+                    <button class="scenario-btn">Configurar</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="controls-section">
+                    <div class="controls">
+                        <div class="control-group"><label>Taxa λ (cheg./s)</label><input type="number" id="lambda" value="4" step="0.1" min="0.1"></div>
+                        <div class="control-group"><label>Taxa μ₁ (lenta)</label><input type="number" id="mu1" value="2.5" step="0.1" min="0.1"></div>
+                        <div class="control-group"><label>Taxa μ₂ (rápida)</label><input type="number" id="mu2" value="8" step="0.1" min="0.1"></div>
+                        <div class="control-group"><label>Limiar m</label><input type="number" id="threshold" value="4" min="1"></div>
+                        <div class="control-group"><label>Capacidade J</label><input type="number" id="capacity" value="5" min="0"></div>
+                    </div>
+                     <div class="simulation-controls">
+                         <div class="btn-group">
+                            <button class="btn btn-primary" id="startBtn">▶️ Demo Visual</button>
+                            <button class="btn btn-stop" id="pauseBtn" disabled>⏹️ Parar e Analisar</button>
+                         </div>
+                         <div class="btn-group">
+                            <button class="btn btn-secondary" id="stepBtn"> Avançar 1 Passo</button>
+                            <button class="btn btn-primary" id="runGoalBtn">🚀 Analisar...</button>
+                         </div>
+                     </div>
+                </div>
+                <div class="diagram-container" id="diagram">
+                    <div class="arrival-area"><div class="client-label">Chegadas</div></div>
+                    <div class="queue-area" id="queueArea"></div>
+                    <div class="rejection-zone" id="rejectionZone">
+                        <div>PACOTE<br>REJEITADO</div>
+                    </div>
+                    <div id="server1-wrapper" class="server-wrapper">
+                        <div class="server-svg-container">
+                             <svg class="server-progress" viewBox="0 0 100 100"><circle class="server-progress-circle" cx="50" cy="50" r="40" fill="none" stroke="#50E3C2" stroke-width="6"/></svg>
+                             <svg class="server-svg slow-mode" id="server1-svg" viewBox="0 0 100 100">
+                                 <rect class="server-body" x="15" y="25" width="70" height="50" rx="8" />
+                                 <text id="server1-text" x="50" y="55" font-family="var(--font-family)" font-size="20" fill="white" text-anchor="middle">S1</text>
+                                 <rect x="30" y="80" width="40" height="5" rx="2" fill-opacity="0.5" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="server2-wrapper" class="server-wrapper">
+                         <div class="server-svg-container">
+                             <svg class="server-progress" viewBox="0 0 100 100"><circle class="server-progress-circle" cx="50" cy="50" r="40" fill="none" stroke="#50E3C2" stroke-width="6"/></svg>
+                             <svg class="server-svg slow-mode" id="server2-svg" viewBox="0 0 100 100">
+                                <rect class="server-body" x="15" y="25" width="70" height="50" rx="8" />
+                                <text id="server2-text" x="50" y="55" font-family="var(--font-family)" font-size="20" fill="white" text-anchor="middle">S2</text>
+                                <rect x="30" y="80" width="40" height="5" rx="2" fill-opacity="0.5" />
+                            </svg>
+                         </div>
+                    </div>
+                    <div class="exit-area"><div class="client-label">Saídas</div></div>
+                    <button class="btn btn-danger" id="resetBtn" style="position: absolute; top: 10px; right: 10px; z-index: 20;">🔄 Reiniciar</button>
+                </div>
+            </div>
+            <div class="right-panel">
+                 <div class="guide-section">
+                     <h3>📝 Resumo da Ação</h3>
+                     <ul id="guideList"></ul>
+                </div>
+                <div class="stats-section">
+                    <h3>📊 Estatísticas em Tempo Real</h3>
+                    <div class="stat-item"><span class="stat-icon">👥</span><span class="stat-label">Pacotes na Fila:</span><span class="stat-value" id="queueLength">0</span></div>
+                    <div class="stat-item"><span class="stat-icon">✅</span><span class="stat-label">Pacotes Atendidos:</span><span class="stat-value" id="clientsServed">0</span></div>
+                    <div class="stat-item"><span class="stat-icon">❌</span><span class="stat-label">Pacotes Rejeitados:</span><span class="stat-value" id="clientsRejected">0</span></div>
+                    <div class="stat-item"><span class="stat-icon">⌛</span><span class="stat-label">Tempo Médio na Fila:</span><span class="stat-value" id="avgQueueTime">0.00s</span></div>
+                    <div class="stat-item"><span class="stat-icon">S₁</span><span class="stat-label">Utilização S₁:</span><span class="stat-value" id="utilS1">0.0%</span></div>
+                    <div class="stat-item"><span class="stat-icon">S₂</span><span class="stat-label">Utilização S₂:</span><span class="stat-value" id="utilS2">0.0%</span></div>
+                    <div class="stat-item"><span class="stat-icon">⚡</span><span class="stat-label">Modo Atual:</span><span class="stat-value" id="currentMode">Lento (μ₁)</span></div>
+                    <div class="stat-item"><span class="stat-icon">🔄</span><span class="stat-label">Cambios de Modo:</span><span class="stat-value" id="modeChanges">0</span></div>
+                    <div id="chart-container"><canvas id="resultsChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Dashboard - Full Width -->
+        <div class="results-dashboard" id="resultsDashboard">
+            <div class="results-header">
+                <h3>📊 Relatório de Análise Completo</h3>
+                <div class="results-summary" id="resultsSummary">Análise finalizada com sucesso</div>
+            </div>
+            
+            <div id="performanceIndicator" class="performance-indicator">
+                <span class="performance-icon">🎯</span>
+                <span class="performance-text" id="performanceText">Avaliando performance...</span>
+            </div>
+            
+            <div class="results-grid">
+                <div class="results-section">
+                    <h4>🎯 Métricas de Performance</h4>
+                    <div class="metric">
+                        <span class="metric-label">Taxa de Atendimento:</span>
+                        <span class="metric-value" id="serviceRate">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Eficiência do Sistema:</span>
+                        <span class="metric-value" id="systemEfficiency">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Throughput (pkt/s):</span>
+                        <span class="metric-value" id="throughput">0.00</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Tempo Total de Análise:</span>
+                        <span class="metric-value" id="totalTime">0.00s</span>
+                    </div>
+                </div>
+                
+                <div class="results-section">
+                    <h4>⚡ Análise Adaptativa</h4>
+                    <div class="metric">
+                        <span class="metric-label">Tempo em Modo Rápido:</span>
+                        <span class="metric-value" id="fastModeTime">0.00s</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">% Tempo Adaptativo:</span>
+                        <span class="metric-value" id="adaptivePercentage">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Freq. de Mudanças:</span>
+                        <span class="metric-value" id="changeFrequency">0/min</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Melhoria vs Fixo:</span>
+                        <span class="metric-value" id="improvement">0%</span>
+                    </div>
+                </div>
+                
+                <div class="results-section">
+                    <h4>📈 Comparação Detalhada</h4>
+                    <div class="metric">
+                        <span class="metric-label">Redução de Rejeições:</span>
+                        <span class="metric-value" id="rejectionReduction">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Ganho de Eficiência:</span>
+                        <span class="metric-value" id="efficiencyGain">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Tempo Médio na Fila:</span>
+                        <span class="metric-value" id="avgWaitTime">0.00s</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Tempo de Resposta:</span>
+                        <span class="metric-value" id="responseTime">0.00s</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <div class="chart-title">Comparação de Performance</div>
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <div class="chart-title">Utilização dos Servidores</div>
+                    <canvas id="utilizationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="analysisModal">
+        <div class="modal-content">
+            <h3>Análise por Objetivos</h3>
+            <p>Quantos pacotes você deseja analisar?</p>
+            <input type="number" id="analysisPacketCount" value="200" min="50" step="50">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="cancelAnalysisBtn">Cancelar</button>
+                <button class="btn btn-primary" id="startAnalysisBtn">Iniciar Análise</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        /* ==================== VARIÁVEIS GLOBAIS DO SISTEMA ==================== */
+        
+        // Estado atual da simulação (fila, servidores, estatísticas)
+        let state = {};
+        
+        // Parâmetros configuráveis do sistema (λ, μ1, μ2, threshold, capacity)
+        let params = {};
+        
+        // Instâncias dos gráficos Chart.js
+        let chart = null;                    // Gráfico de comparação básico
+        let comparisonChart = null;          // Gráfico de comparação detalhada
+        let utilizationChart = null;         // Gráfico de utilização dos servidores
+        
+        // Mapa para rastrear elementos visuais dos pacotes
+        let packetElements = new Map();
+        
+        // Intervalo para simulação contínua
+        let continuousSimInterval = null;
+
+        /* ==================== REFERÊNCIAS DOS ELEMENTOS DOM ==================== */
+        const DOM = {
+            // Elementos do diagrama visual
+            diagram: document.getElementById('diagram'),
+            queueArea: document.getElementById('queueArea'),
+            rejectionZone: document.getElementById('rejectionZone'),
+            server1: document.getElementById('server1-wrapper'),
+            server2: document.getElementById('server2-wrapper'),
+            
+            // Botões de controle
+            stepBtn: document.getElementById('stepBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            runGoalBtn: document.getElementById('runGoalBtn'),
+            startBtn: document.getElementById('startBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            
+            // Elementos de interface
+            guideList: document.getElementById('guideList'),
+            chartContainer: document.getElementById('chart-container'),
+            resultsChart: document.getElementById('resultsChart'),
+            resultsDashboard: document.getElementById('resultsDashboard'),
+            comparisonChart: document.getElementById('comparisonChart'),
+            utilizationChart: document.getElementById('utilizationChart'),
+            
+            // Modal de análise
+            analysisModal: document.getElementById('analysisModal'),
+            startAnalysisBtn: document.getElementById('startAnalysisBtn'),
+            cancelAnalysisBtn: document.getElementById('cancelAnalysisBtn'),
+            analysisPacketCountInput: document.getElementById('analysisPacketCount'),
+            
+            // Inputs de parâmetros e cartões de cenário
+            inputs: ['lambda', 'mu1', 'mu2', 'threshold', 'capacity'],
+            scenarioCards: document.querySelectorAll('.scenario-card')
+        };
+
+        /* ==================== CONFIGURAÇÕES DE CENÁRIOS PRÉ-DEFINIDOS ==================== */
+        // Cenários que demonstram diferentes comportamentos do sistema
+        const scenarios = {
+            'low-load': {
+                lambda: 2,      // Taxa de chegada baixa
+                mu1: 2.5,       // Taxa de atendimento lenta
+                mu2: 8,         // Taxa de atendimento rápida
+                threshold: 4,   // Limite para mudança de modo
+                capacity: 5,    // Capacidade da fila
+                name: 'Carga Baixa'
+            },
+            'overload': {
+                lambda: 6,      // Taxa de chegada alta (sobrecarga)
+                mu1: 2,         // Taxa de atendimento lenta
+                mu2: 5,         // Taxa de atendimento rápida (limitada)
+                threshold: 3,   // Limite baixo para mudança
+                capacity: 4,    // Capacidade da fila reduzida
+                name: 'Sobrecarga'
+            },
+            'adaptive': {
+                lambda: 6,      // Taxa de chegada alta
+                mu1: 2,         // Taxa de atendimento lenta
+                mu2: 8,         // Taxa de atendimento rápida (alta)
+                threshold: 3,   // Limite para mudança
+                capacity: 4,    // Capacidade da fila
+                name: 'Solução Adaptativa'
+            },
+            'distribution': {
+                lambda: 4,      // Taxa de chegada média
+                mu1: 3,         // Taxa de atendimento lenta
+                mu2: 7,         // Taxa de atendimento rápida
+                threshold: 2,   // Limite baixo para mudança
+                capacity: 6,    // Capacidade da fila maior
+                name: 'Impacto da Distribuição'
+            }
+        };
+
+        /* ==================== FUNÇÕES DE CONFIGURAÇÃO E CONTROLE ==================== */
+        
+        /**
+         * Aplica um cenário pré-definido ao sistema
+         * @param {string} scenarioKey - Chave do cenário ('low-load', 'overload', etc.)
+         */
+        function applyScenario(scenarioKey) {
+            const scenario = scenarios[scenarioKey];
+            if (!scenario) return;
+
+            // Primeiro, garante que o dashboard está oculto e gráficos são destruídos
+            DOM.resultsDashboard.classList.remove('active');
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            if (comparisonChart) {
+                comparisonChart.destroy();
+                comparisonChart = null;
+            }
+            if (utilizationChart) {
+                utilizationChart.destroy();
+                utilizationChart = null;
+            }
+
+            // Atualiza os valores dos inputs com os parâmetros do cenário
+            document.getElementById('lambda').value = scenario.lambda;
+            document.getElementById('mu1').value = scenario.mu1;
+            document.getElementById('mu2').value = scenario.mu2;
+            document.getElementById('threshold').value = scenario.threshold;
+            document.getElementById('capacity').value = scenario.capacity;
+
+            // Atualiza feedback visual dos cartões de cenário
+            DOM.scenarioCards.forEach(card => card.classList.remove('active'));
+            const selectedCard = document.querySelector(`[data-scenario="${scenarioKey}"]`);
+            if (selectedCard) selectedCard.classList.add('active');
+
+            // Reinicia a simulação com os novos parâmetros
+            resetState();
+            
+            // Adiciona entrada no log
+            state.log.push(`<b>Cenário "${scenario.name}" configurado!</b> Parâmetros atualizados.`);
+            updateUI();
+        }
+
+        /**
+         * Reinicia o estado completo da simulação
+         * Limpa todas as variáveis, elementos visuais e gráficos
+         */
+        function resetState() {
+            // Para qualquer simulação em andamento
+            clearInterval(continuousSimInterval);
+            
+            // Reinicia o estado completo do sistema
+            state = {
+                queue: [],                                    // Fila de espera vazia
+                server1: {                                    // Estado do servidor 1
+                    busy: false,                              // Não está ocupado
+                    client: null,                             // Sem cliente sendo atendido
+                    endTime: Infinity,                        // Sem tempo de fim definido
+                    serviceStartTime: 0,                      // Tempo de início do atendimento
+                    serviceDuration: 0,                       // Duração do atendimento
+                    busyTime: 0                               // Tempo total ocupado
+                },
+                server2: {                                    // Estado do servidor 2 (igual ao servidor 1)
+                    busy: false, 
+                    client: null, 
+                    endTime: Infinity, 
+                    serviceStartTime: 0, 
+                    serviceDuration: 0, 
+                    busyTime: 0 
+                },
+                currentTime: 0,                               // Tempo atual da simulação
+                nextArrival: 0,                               // Tempo da próxima chegada
+                clientCounter: 0,                             // Contador de clientes
+                stats: {                                      // Estatísticas da simulação
+                    served: 0,                                // Clientes atendidos
+                    rejected: 0,                              // Clientes rejeitados
+                    totalQueueTime: 0,                        // Tempo total em fila
+                    modeChanges: 0,                           // Mudanças de modo
+                    timeInFastMode: 0                         // Tempo em modo rápido
+                },
+                isFastMode: false,                            // Está em modo rápido?
+                isPaused: false,                              // Está pausado?
+                isRunning: false,                             // Está executando?
+                log: ["<b>Bem-vindo.</b> Ajuste os parâmetros e escolha um modo de simulação."]
+            };
+            
+            // Remove todos os elementos visuais dos pacotes
+            packetElements.forEach(el => el.remove());
+            packetElements.clear();
+            
+            // Atualiza parâmetros e calcula próxima chegada
+            updateParams();
+            state.nextArrival = generateNextArrival();
+            
+            // Reseta controles da interface
+            toggleControls(false);
+            DOM.pauseBtn.disabled = true;
+            DOM.pauseBtn.innerText = '⏹️ Parar e Analisar';
+            DOM.chartContainer.style.display = 'none';
+            DOM.resultsDashboard.classList.remove('active');
+            
+            // Limpa gráficos existentes
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            if (comparisonChart) {
+                comparisonChart.destroy();
+                comparisonChart = null;
+            }
+            if (utilizationChart) {
+                utilizationChart.destroy();
+                utilizationChart = null;
+            }
+            
+            updateUI();
+        }
+
+        /**
+         * Atualiza os parâmetros do sistema a partir dos inputs da interface
+         */
+        function updateParams() { 
+            DOM.inputs.forEach(id => { 
+                params[id] = parseFloat(document.getElementById(id).value); 
+            }); 
+        }
+        
+        /* ==================== FUNÇÕES DE SIMULAÇÃO PRINCIPAL ==================== */
+        
+        /**
+         * Executa um passo da simulação (processa o próximo evento)
+         * @returns {boolean|null} true se evento foi processado, null se não há mais eventos
+         */
+        function simulationStep() {
+            // Determina o próximo evento (chegada ou saída de servidor)
+            const nextEventTime = Math.min(state.nextArrival, state.server1.endTime, state.server2.endTime);
+            if(nextEventTime === Infinity) return null;
+            
+            // Calcula tempo decorrido e atualiza estatísticas de ocupação
+            const timeDelta = nextEventTime - state.currentTime;
+            if (state.server1.busy) state.server1.busyTime += timeDelta;
+            if (state.server2.busy) state.server2.busyTime += timeDelta;
+            if (state.isFastMode) state.stats.timeInFastMode += timeDelta;
+            state.currentTime = nextEventTime;
+
+            // Processa o evento apropriado
+            if (state.currentTime === state.server1.endTime) {
+                processDeparture(1);              // Saída do servidor 1
+            } else if (state.currentTime === state.server2.endTime) {
+                processDeparture(2);              // Saída do servidor 2
+            } else {
+                processArrival();                 // Chegada de novo cliente
+            }
+            
+            // Verifica se precisa mudar modo adaptativo
+            checkAdaptiveMode();
+            return true;
+        }
+        
+        /**
+         * Processa a chegada de um novo cliente ao sistema
+         */
+        function processArrival() {
+            // Cria novo cliente com ID único e tempo de chegada
+            const client = { 
+                id: ++state.clientCounter, 
+                arrivalTime: state.currentTime, 
+                queueEnterTime: state.currentTime 
+            };
+            
+            // Cria elemento visual do pacote
+            packetElements.set(client.id, createPacketElement(client));
+            
+            // Verifica onde alocar o cliente (prioridade: server1 > server2 > fila > rejeição)
+            if (!state.server1.busy) {
+                assignToServer(client, 1);                    // Servidor 1 livre
+            } else if (!state.server2.busy) {
+                assignToServer(client, 2);                    // Servidor 2 livre
+            } else if (state.queue.length < params.capacity) {
+                state.queue.push(client);                     // Adiciona à fila
+            } else { 
+                // Fila cheia - rejeita cliente
+                state.stats.rejected++; 
+                animateRejection(client);
+                if(!state.log.some(l=>l.includes('cheia'))) {
+                    state.log.push('<b>Fila cheia!</b> Pacotes estão sendo rejeitados.'); 
+                }
+            }
+            
+            // Agenda próxima chegada
+            state.nextArrival = state.currentTime + generateNextArrival();
+        }
+
+        /**
+         * Processa a saída de um cliente de um servidor
+         * @param {number} serverNum - Número do servidor (1 ou 2)
+         */
+        function processDeparture(serverNum) {
+            const server = serverNum === 1 ? state.server1 : state.server2;
+            
+            // Atualiza estatísticas de atendimento
+            state.stats.served++;
+            server.busy = false;
+            
+            // Anima saída do pacote
+            animatePacket(server.client.id, '90%', '30%', true);
+            
+            // Se há fila, move próximo cliente para o servidor
+            if (state.queue.length > 0) {
+                assignToServer(state.queue.shift(), serverNum);
+            } else {
+                server.endTime = Infinity;                    // Servidor fica livre
+            }
+        }
+
+        /**
+         * Atribui um cliente a um servidor específico
+         * @param {Object} client - Cliente a ser atribuído
+         * @param {number} serverNum - Número do servidor (1 ou 2)
+         */
+        function assignToServer(client, serverNum) {
+            // Calcula tempo total que o cliente passou na fila
+            state.stats.totalQueueTime += state.currentTime - client.queueEnterTime;
+            
+            const server = serverNum === 1 ? state.server1 : state.server2;
+            server.busy = true;
+            server.client = client;
+            server.serviceDuration = generateServiceTime();   // Gera tempo de atendimento
+            server.serviceStartTime = state.currentTime;
+            server.endTime = state.currentTime + server.serviceDuration;
+            
+            state.log.push(`Pacote ${client.id} vai para o Servidor ${serverNum}.`);
+        }
+        
+        /**
+         * Verifica e aplica lógica do modo adaptativo
+         * Muda entre modo lento (μ1) e rápido (μ2) baseado no número de clientes no sistema
+         */
+        function checkAdaptiveMode() {
+            // Conta total de clientes no sistema (fila + servidores ocupados)
+            const totalClients = state.queue.length + 
+                                (state.server1.busy ? 1 : 0) + 
+                                (state.server2.busy ? 1 : 0);
+            
+            // Determina se deve estar em modo rápido
+            const shouldBeFast = totalClients >= params.threshold;
+            
+            // Se mudou de modo, atualiza servidores e estatísticas
+            if (shouldBeFast !== state.isFastMode) {
+                const oldRate = state.isFastMode ? params.mu2 : params.mu1;
+                const newRate = shouldBeFast ? params.mu2 : params.mu1;
+                
+                state.isFastMode = shouldBeFast;
+                state.stats.modeChanges++;
+                
+                // Ajusta tempos de atendimento dos servidores ativos
+                if (state.server1.busy) {
+                    state.server1.endTime = state.currentTime + 
+                        ((state.server1.endTime - state.currentTime) * (oldRate / newRate));
+                }
+                if (state.server2.busy) {
+                    state.server2.endTime = state.currentTime + 
+                        ((state.server2.endTime - state.currentTime) * (oldRate / newRate));
+                }
+                
+                state.log.push(`<b>Sistema congestionado!</b> Mudando para modo ${shouldBeFast ? '<b>Rápido</b>' : '<b>Lento</b>'}.`);
+            }
+        }
+
+        /* ==================== FUNÇÕES DE GERAÇÃO DE TEMPOS ALEATÓRIOS ==================== */
+        
+        /**
+         * Gera próximo tempo de chegada usando distribuição exponencial
+         * @returns {number} Tempo até próxima chegada
+         */
+        const generateNextArrival = () => -Math.log(Math.random()) / params.lambda;
+        
+        /**
+         * Gera tempo de atendimento usando distribuição exponencial
+         * @returns {number} Tempo de atendimento baseado no modo atual (μ1 ou μ2)
+         */
+        const generateServiceTime = () => -Math.log(Math.random()) / (state.isFastMode ? params.mu2 : params.mu1);
+        
+        /* ==================== FUNÇÕES DE INTERFACE VISUAL ==================== */
+        
+        /**
+         * Cria elemento visual para um pacote (cliente)
+         * @param {Object} client - Cliente para criar elemento visual
+         * @returns {HTMLElement} Elemento DOM do pacote
+         */
+        function createPacketElement(client) {
+            const el = document.createElement('div');
+            el.className = 'packet';
+            el.innerText = client.id;                         // Mostra ID do cliente
+            el.style.left = '10%';                            // Posição inicial (área de chegada)
+            el.style.top = '30%';
+            el.style.transform = 'translate(-50%, -50%)';
+            DOM.diagram.appendChild(el);
+            return el;
+        }
+
+        /**
+         * Atualiza toda a interface do usuário com o estado atual da simulação
+         * Esta é a função principal para sincronizar dados com a visualização
+         */
+        function updateUI() {
+            /* ==================== ATUALIZAÇÃO DAS ESTATÍSTICAS ==================== */
+            
+            // Atualiza estatísticas básicas
+            document.getElementById('queueLength').innerText = state.queue.length;
+            document.getElementById('clientsServed').innerText = state.stats.served;
+            document.getElementById('clientsRejected').innerText = state.stats.rejected;
+            
+            // Calcula e mostra tempo médio na fila
+            const avgQueueTime = state.stats.served > 0 ? 
+                (state.stats.totalQueueTime / state.stats.served).toFixed(2) : '0.00';
+            document.getElementById('avgQueueTime').innerText = `${avgQueueTime}s`;
+            
+            // Calcula e mostra utilização dos servidores
+            const utilS1 = state.currentTime > 0 ? 
+                (state.server1.busyTime / state.currentTime * 100).toFixed(1) : '0.0';
+            const utilS2 = state.currentTime > 0 ? 
+                (state.server2.busyTime / state.currentTime * 100).toFixed(1) : '0.0';
+            document.getElementById('utilS1').innerText = `${utilS1}%`;
+            document.getElementById('utilS2').innerText = `${utilS2}%`;
+            
+            // Mostra modo atual e número de mudanças
+            document.getElementById('currentMode').innerText = state.isFastMode ? 'Rápido (μ₂)' : 'Lento (μ₁)';
+            document.getElementById('modeChanges').innerText = state.stats.modeChanges;
+            
+            /* ==================== ATUALIZAÇÃO DA VISUALIZAÇÃO DA FILA ==================== */
+            
+            // Limpa e recria slots da fila
+            DOM.queueArea.innerHTML = '';
+            for(let i = 0; i < params.capacity; i++) {
+                const slot = document.createElement('div'); 
+                slot.className = 'queue-slot';
+                DOM.queueArea.appendChild(slot);
+            }
+            
+            // Atualiza estado visual da fila baseado na ocupação
+            const queueOccupancy = state.queue.length / params.capacity;
+            DOM.queueArea.classList.remove('full', 'congested');
+            
+            if (state.queue.length >= params.capacity) {
+                DOM.queueArea.classList.add('full');          // Fila cheia (vermelho)
+            } else if (queueOccupancy >= 0.7) {
+                DOM.queueArea.classList.add('congested');     // Fila congestionada (amarelo)
+            }
+            
+            // Posiciona pacotes na fila visualmente
+            state.queue.forEach((c, i) => {
+                const xPos = `calc(50% - ${(params.capacity * 50)/2}px + ${i * 50 + 25}px)`;
+                animatePacket(c.id, xPos, '30%');
+            });
+            
+            /* ==================== ATUALIZAÇÃO DOS SERVIDORES ==================== */
+            
+            ['server1', 'server2'].forEach((s, i) => {
+                const serverState = i === 0 ? state.server1 : state.server2;
+                const svg = document.getElementById(`${s}-svg`);
+                const text = document.getElementById(`${s}-text`);
+                
+                // Atualiza cor do servidor baseado no modo
+                svg.classList.toggle('fast-mode', state.isFastMode);
+                svg.classList.toggle('slow-mode', !state.isFastMode);
+                
+                const progressCircle = DOM[s].querySelector('.server-progress-circle');
+                
+                if (serverState.busy) {
+                    // Servidor ocupado - mostra progresso e pacote
+                    text.style.display = 'none';
+                    const elapsed = state.currentTime - serverState.serviceStartTime;
+                    const progress = Math.min(elapsed / serverState.serviceDuration, 1);
+                    progressCircle.style.strokeDashoffset = 251.2 * (1 - progress);
+                    
+                    // Posiciona pacote no servidor
+                    const xPos = i === 0 ? '35%' : '65%';
+                    animatePacket(serverState.client.id, xPos, 'calc(90% - 50px)');
+                } else {
+                    // Servidor livre - reseta progresso e mostra texto
+                    progressCircle.style.strokeDashoffset = 251.2;
+                    text.style.display = 'block';
+                }
+            });
+            
+            /* ==================== ATUALIZAÇÃO DO LOG ==================== */
+            
+            // Adiciona nova entrada ao log se necessário
+            const lastLog = state.log[state.log.length - 1];
+            if (DOM.guideList.lastChild?.innerHTML !== lastLog) {
+                 const li = document.createElement('li'); 
+                 li.innerHTML = lastLog;
+                 
+                 // Destaca eventos importantes
+                 if (lastLog.includes('Rápido') || lastLog.includes('cheia')) {
+                     li.classList.add('highlight-event');
+                 }
+                 
+                 DOM.guideList.appendChild(li);
+                 DOM.guideList.scrollTop = DOM.guideList.scrollHeight;  // Auto-scroll
+            }
+        }
+        
+        /**
+         * Anima o movimento de um pacote para uma nova posição
+         * @param {number} packetId - ID do pacote a ser animado
+         * @param {string} x - Posição X de destino (CSS)
+         * @param {string} y - Posição Y de destino (CSS) 
+         * @param {boolean} exit - Se true, remove o pacote após animação
+         */
+        function animatePacket(packetId, x, y, exit = false) {
+            const el = packetElements.get(packetId);
+            if(!el) return;
+            
+            // Move pacote para nova posição
+            el.style.left = x;
+            el.style.top = y;
+            el.style.transform = 'translate(-50%, -50%)';
+            
+            // Se é saída, faz fade out e remove elemento
+            if(exit) {
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    el.remove();
+                    packetElements.delete(packetId);
+                }, 500);
+            }
+        }
+        
+        /**
+         * Controla habilitação/desabilitação dos controles da interface
+         * @param {boolean} isRunning - Se a simulação está executando
+         * @param {boolean} keepStepActive - Se deve manter botão de passo ativo
+         */
+        function toggleControls(isRunning, keepStepActive = false) {
+            // Desabilita inputs de parâmetros durante execução
+            DOM.inputs.forEach(id => document.getElementById(id).disabled = isRunning);
+            
+            // Controla botões principais
+            DOM.startBtn.disabled = isRunning;
+            DOM.runGoalBtn.disabled = isRunning;
+            DOM.stepBtn.disabled = isRunning && !keepStepActive;
+        }
+
+        /* ==================== EVENT LISTENERS DOS CONTROLES ==================== */
+        
+        /**
+         * Botão Iniciar/Continuar - Inicia ou continua simulação contínua
+         */
+        DOM.startBtn.onclick = () => {
+            if (state.isRunning && !state.isPaused) return;
+            
+            // Se não estava executando, reinicia
+            if (!state.isRunning) { 
+                resetState(); 
+                state.isRunning = true; 
+            }
+            
+            // Continua execução
+            state.isPaused = false;
+            toggleControls(true);
+            DOM.pauseBtn.disabled = false;
+            DOM.pauseBtn.innerText = '⏹️ Parar e Analisar';
+            
+            // Executa simulação automaticamente a cada 500ms
+            continuousSimInterval = setInterval(() => {
+                if(!state.isPaused) { 
+                    simulationStep(); 
+                    updateUI(); 
+                }
+            }, 500);
+        };
+        
+        /**
+         * Botão Passo a Passo - Executa um único passo da simulação
+         */
+        DOM.stepBtn.onclick = () => {
+            clearInterval(continuousSimInterval);
+            
+            // Inicia simulação se não estava executando
+            if (!state.isRunning) {
+                 resetState();
+                 state.isRunning = true;
+            }
+            
+            // Pausa e permite controle manual
+            state.isPaused = true;
+            DOM.pauseBtn.disabled = true;
+            toggleControls(false); 
+            
+            // Executa um único passo
+            simulationStep();
+            updateUI();
+        };
+
+        /**
+         * Botão Reset - Reinicia completamente a simulação
+         */
+        DOM.resetBtn.onclick = resetState;
+        
+        /**
+         * Botão Parar e Analisar - Para simulação e gera análise automática
+         */
+        DOM.pauseBtn.onclick = () => {
+            // Para completamente a simulação
+            clearInterval(continuousSimInterval);
+            state.isRunning = false;
+            state.isPaused = false;
+            
+            // Reseta controles da interface
+            toggleControls(false);
+            DOM.pauseBtn.disabled = true;
+            DOM.pauseBtn.innerText = '⏹️ Parar e Analisar';
+            
+            // Gera resultados automaticamente se há dados suficientes
+            const totalProcessed = state.stats.served + state.stats.rejected;
+            if (totalProcessed >= 10) { // Mínimo 10 pacotes para análise válida
+                state.log.push(`<b>Demo visual detido.</b> Gerando análise com ${totalProcessed} pacotes processados...`);
+                updateUI();
+                
+                // Executa análise completa após pequeno delay
+                setTimeout(async () => {
+                    const fullAnalysisResults = await runFullAnalysis(totalProcessed);
+                    const resultsData = generateComprehensiveResults(fullAnalysisResults, totalProcessed);
+                    displayComprehensiveResults(resultsData);
+                    displayChart(fullAnalysisResults.adaptive, fullAnalysisResults.fixed);
+                    
+                    state.log.push(`<b>Análise completa.</b> Verifique o relatório detalhado abaixo.`);
+                    updateUI();
+                }, 500);
+            } else {
+                state.log.push(`<b>Demo visual detido.</b> Processados apenas ${totalProcessed} pacotes - insuficiente para análise detalhada.`);
+                updateUI();
+            }
+        };
+
+        /**
+         * Botão Análise por Objetivos - Abre modal para definir número de pacotes
+         */
+        DOM.runGoalBtn.onclick = () => {
+            DOM.analysisModal.style.display = 'flex';
+        };
+
+        /**
+         * Botão Cancelar (no modal) - Fecha modal sem executar análise
+         */
+        DOM.cancelAnalysisBtn.onclick = () => {
+            DOM.analysisModal.style.display = 'none';
+        }
+
+        /**
+         * Botão Iniciar Análise (no modal) - Executa análise com número específico de pacotes
+         */
+        DOM.startAnalysisBtn.onclick = async () => {
+            DOM.analysisModal.style.display = 'none';
+            resetState();
+            toggleControls(true);
+            DOM.pauseBtn.disabled = true;
+            
+            // Obtém número de clientes a analisar do input
+            const clientsToAnalyze = parseInt(DOM.analysisPacketCountInput.value);
+            state.log.push(`Analisando o sistema para <b>${clientsToAnalyze} pacotes...</b>`);
+            state.isRunning = true;
+            
+            // Ajusta velocidade da animação baseado no número de pacotes
+            // Para <= 199 pacotes: animação mais lenta (200ms) para melhor visualização
+            // Para > 199 pacotes: animação rápida (50ms) para completar rapidamente
+            const animationDelay = clientsToAnalyze <= 199 ? 200 : 50;
+            
+            // Função assíncrona para executar simulação com delay entre passos
+            const runAsync = (delay) => new Promise(resolve => {
+                const event = simulationStep();
+                updateUI();
+                
+                // Continua até atingir número desejado de pacotes processados
+                if(state.stats.served + state.stats.rejected < clientsToAnalyze && event) {
+                    setTimeout(() => runAsync(delay).then(resolve), delay);
+                } else {
+                    resolve();
+                }
+            });
+
+            // Executa simulação visual
+            await runAsync(animationDelay);
+
+            // Executa análise completa (comparativa) em background
+            const fullAnalysisResults = await runFullAnalysis(clientsToAnalyze);
+            
+            // Finaliza e mostra resultados
+            state.isRunning = false;
+            toggleControls(false);
+            DOM.pauseBtn.disabled = true;
+            state.log.push(`<b>Análise completa.</b> Verifique o relatório detalhado abaixo.`);
+            updateUI();
+            
+            // Gera e exibe resultados abrangentes
+            const resultsData = generateComprehensiveResults(fullAnalysisResults, clientsToAnalyze);
+            displayComprehensiveResults(resultsData);
+            displayChart(fullAnalysisResults.adaptive, fullAnalysisResults.fixed);
+        };
+        
+        /* ==================== FUNÇÕES DE ANÁLISE COMPARATIVA ==================== */
+        
+        /**
+         * Executa análise completa comparando sistema adaptativo vs sistema fixo
+         * @param {number} clientsToAnalyze - Número de clientes para simular
+         * @returns {Object} Resultados das duas simulações
+         */
+        function runFullAnalysis(clientsToAnalyze) {
+            return new Promise(async resolve => {
+                // Executa simulação do sistema adaptativo
+                const adaptive = await runSimulationForAnalysis(clientsToAnalyze, params, 'adaptive');
+                
+                // Executa simulação do sistema fixo (apenas modo lento)
+                const fixed = await runSimulationForAnalysis(clientsToAnalyze, params, 'fixed');
+                
+                resolve({adaptive, fixed});
+            });
+        }
+        
+        /**
+         * Executa uma simulação completa para análise (sem visualização)
+         * @param {number} clientsToSimulate - Número de clientes a simular
+         * @param {Object} params - Parâmetros do sistema
+         * @param {string} mode - Modo da simulação ('adaptive' ou 'fixed')
+         * @returns {Object} Estado final da simulação
+         */
+        function runSimulationForAnalysis(clientsToSimulate, params, mode) {
+             return new Promise(resolve => {
+                // Inicializa estado local da simulação
+                let localState = {
+                    queue: [], 
+                    server1: { busy: false, client: null, endTime: Infinity, busyTime: 0 }, 
+                    server2: { busy: false, client: null, endTime: Infinity, busyTime: 0 },
+                    currentTime: 0, 
+                    nextArrival: 0, 
+                    clientCounter: 0,
+                    stats: { served: 0, rejected: 0, totalQueueTime: 0, modeChanges: 0, timeInFastMode: 0 },
+                    isFastMode: false,
+                };
+                
+                localState.nextArrival = -Math.log(Math.random()) / params.lambda;
+                
+                // Para modo fixo, usa apenas μ1 e threshold muito alto
+                const p = (mode === 'fixed') ? 
+                    {...params, mu2: params.mu1, threshold: clientsToSimulate * 2} : 
+                    params;
+
+                // Loop principal da simulação
+                while(localState.stats.served + localState.stats.rejected < clientsToSimulate) {
+                     const nextEventTime = Math.min(localState.nextArrival, localState.server1.endTime, localState.server2.endTime);
+                     if(nextEventTime === Infinity) break;
+                     
+                     // Atualiza tempo e estatísticas de ocupação
+                     const timeDelta = nextEventTime - localState.currentTime;
+                     if (localState.server1.busy) localState.server1.busyTime += timeDelta;
+                     if (localState.server2.busy) localState.server2.busyTime += timeDelta;
+                     if (localState.isFastMode) localState.stats.timeInFastMode += timeDelta;
+                     localState.currentTime = nextEventTime;
+                     
+                     // Processa eventos (saídas dos servidores)
+                     if (nextEventTime === localState.server1.endTime) {
+                         const client = localState.server1.client;
+                         localState.stats.served++;
+                         localState.stats.totalQueueTime += localState.currentTime - client.queueEnterTime;
+                         localState.server1.busy = false;
+                         
+                         // Move próximo da fila para servidor 1
+                         if(localState.queue.length > 0) {
+                            const nextClient = localState.queue.shift();
+                            localState.server1.busy = true; 
+                            localState.server1.client = nextClient; 
+                            localState.server1.endTime = localState.currentTime + (-Math.log(Math.random()) / (localState.isFastMode ? p.mu2 : p.mu1));
+                         } else localState.server1.endTime = Infinity;
+                         
+                     } else if (nextEventTime === localState.server2.endTime) {
+                         const client = localState.server2.client;
+                         localState.stats.served++;
+                         localState.stats.totalQueueTime += localState.currentTime - client.queueEnterTime;
+                         localState.server2.busy = false;
+                         
+                         // Move próximo da fila para servidor 2
+                         if(localState.queue.length > 0) {
+                            const nextClient = localState.queue.shift();
+                            localState.server2.busy = true; 
+                            localState.server2.client = nextClient; 
+                            localState.server2.endTime = localState.currentTime + (-Math.log(Math.random()) / (localState.isFastMode ? p.mu2 : p.mu1));
+                         } else localState.server2.endTime = Infinity;
+                         
+                     } else {
+                        // Processa chegada de novo cliente
+                        const client = { id: ++localState.clientCounter, arrivalTime: localState.currentTime, queueEnterTime: localState.currentTime };
+                        
+                        // Atribui cliente a servidor livre ou fila
+                        if (!localState.server1.busy) {
+                            const server = localState.server1; 
+                            server.busy = true; 
+                            server.client = client; 
+                            server.endTime = localState.currentTime + (-Math.log(Math.random()) / (localState.isFastMode ? p.mu2 : p.mu1));
+                        } else if (!localState.server2.busy) {
+                            const server = localState.server2; 
+                            server.busy = true; 
+                            server.client = client; 
+                            server.endTime = localState.currentTime + (-Math.log(Math.random()) / (localState.isFastMode ? p.mu2 : p.mu1));
+                        } else if (localState.queue.length < p.capacity) {
+                            localState.queue.push(client);
+                        } else {
+                            localState.stats.rejected++;
+                        }
+                        
+                        // Agenda próxima chegada
+                        localState.nextArrival = localState.currentTime + (-Math.log(Math.random()) / p.lambda);
+                     }
+                     
+                     // Verifica modo adaptativo (apenas para modo 'adaptive')
+                     const totalClients = localState.queue.length + (localState.server1.busy?1:0) + (localState.server2.busy?1:0);
+                     if(mode === 'adaptive') localState.isFastMode = totalClients >= p.threshold;
+                 }
+                resolve(localState);
+             });
+        }
+        
+        function displayChart(adaptiveState, fixedState) {
+            DOM.chartContainer.style.display = 'block';
+            const adaptiveAvgTime = adaptiveState.stats.served > 0 ? (adaptiveState.stats.totalQueueTime / adaptiveState.stats.served) : 0;
+            const fixedAvgTime = fixedState.stats.served > 0 ? (fixedState.stats.totalQueueTime / fixedState.stats.served) : 0;
+            const ctx = DOM.resultsChart.getContext('2d');
+            if(chart) {
+                chart.destroy();
+                chart = null;
+            }
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Tempo Médio na Fila (s)', 'Pacotes Rejeitados'],
+                    datasets: [
+                        { label: 'Sistema Adaptativo', data: [adaptiveAvgTime, adaptiveState.stats.rejected], backgroundColor: 'rgba(74, 144, 226, 0.8)', borderWidth: 1, borderRadius: 5 },
+                        { label: 'Sistema Fixo (μ₁)', data: [fixedAvgTime, fixedState.stats.rejected], backgroundColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 1, borderRadius: 5 }
+                    ]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: {
+                            display: true,
+                            text: 'Comparação de Desempenho Final',
+                            font: { size: 16, family: "'Inter', sans-serif" }
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateComprehensiveResults(analysisResults, totalPackets) {
+            const { adaptive, fixed } = analysisResults;
+            const currentState = state;
+            
+            // Calculate comprehensive metrics
+            const serviceRate = ((currentState.stats.served / totalPackets) * 100).toFixed(1);
+            const systemEfficiency = (100 - ((currentState.stats.rejected / totalPackets) * 100)).toFixed(1);
+            const throughput = (currentState.stats.served / currentState.currentTime).toFixed(2);
+            const totalTime = currentState.currentTime.toFixed(2);
+            const fastModeTime = currentState.stats.timeInFastMode.toFixed(2);
+            const adaptivePercentage = ((currentState.stats.timeInFastMode / currentState.currentTime) * 100).toFixed(1);
+            const changeFrequency = (currentState.stats.modeChanges / (currentState.currentTime / 60)).toFixed(1);
+            
+            // Compare with fixed system
+            const adaptiveRejects = adaptive.stats.rejected;
+            const fixedRejects = fixed.stats.rejected;
+            const improvement = fixedRejects > 0 ? (((fixedRejects - adaptiveRejects) / fixedRejects) * 100).toFixed(1) : '0';
+            
+            const rejectionReduction = improvement;
+            const efficiencyGain = (systemEfficiency - (100 - ((fixedRejects / totalPackets) * 100))).toFixed(1);
+            
+            const avgWaitTimeAdaptive = adaptive.stats.served > 0 ? (adaptive.stats.totalQueueTime / adaptive.stats.served).toFixed(2) : '0.00';
+            const avgWaitTimeFixed = fixed.stats.served > 0 ? (fixed.stats.totalQueueTime / fixed.stats.served).toFixed(2) : '0.00';
+            const responseTime = (parseFloat(avgWaitTimeAdaptive) + (1 / params.mu1)).toFixed(2);
+            
+            // Performance assessment
+            let performanceLevel = 'good';
+            let performanceText = 'Sistema funcionando adequadamente';
+            let performanceIcon = '✅';
+            
+            if (currentState.stats.rejected === 0 && currentState.stats.modeChanges > 0) {
+                performanceLevel = 'excellent';
+                performanceText = 'Excelente! Sistema adaptativo funcionando perfeitamente';
+                performanceIcon = '🌟';
+            } else if (currentState.stats.rejected / totalPackets > 0.1) {
+                performanceLevel = 'critical';
+                performanceText = 'Atenção! Alta taxa de rejeição detectada';
+                performanceIcon = '⚠️';
+            } else if (currentState.stats.rejected / totalPackets > 0.05) {
+                performanceLevel = 'warning';
+                performanceText = 'Sistema sob pressão, monitore os parâmetros';
+                performanceIcon = '⚡';
+            }
+            
+            return {
+                metrics: {
+                    serviceRate,
+                    systemEfficiency,
+                    throughput,
+                    totalTime,
+                    fastModeTime,
+                    adaptivePercentage,
+                    changeFrequency,
+                    improvement,
+                    rejectionReduction,
+                    efficiencyGain,
+                    avgWaitTime: avgWaitTimeAdaptive,
+                    responseTime
+                },
+                performance: {
+                    level: performanceLevel,
+                    text: performanceText,
+                    icon: performanceIcon
+                },
+                comparison: {
+                    adaptive: {
+                        served: adaptive.stats.served,
+                        rejected: adaptive.stats.rejected,
+                        avgWaitTime: avgWaitTimeAdaptive,
+                        utilS1: adaptive.currentTime > 0 ? (adaptive.server1.busyTime / adaptive.currentTime * 100).toFixed(1) : '0.0',
+                        utilS2: adaptive.currentTime > 0 ? (adaptive.server2.busyTime / adaptive.currentTime * 100).toFixed(1) : '0.0'
+                    },
+                    fixed: {
+                        served: fixed.stats.served,
+                        rejected: fixed.stats.rejected,
+                        avgWaitTime: avgWaitTimeFixed,
+                        utilS1: fixed.currentTime > 0 ? (fixed.server1.busyTime / fixed.currentTime * 100).toFixed(1) : '0.0',
+                        utilS2: fixed.currentTime > 0 ? (fixed.server2.busyTime / fixed.currentTime * 100).toFixed(1) : '0.0'
+                    }
+                }
+            };
+        }
+
+        function displayComprehensiveResults(resultsData) {
+            const { metrics, performance, comparison } = resultsData;
+            
+            // Ensure any existing charts are destroyed before creating new ones
+            if (comparisonChart) {
+                comparisonChart.destroy();
+                comparisonChart = null;
+            }
+            if (utilizationChart) {
+                utilizationChart.destroy();
+                utilizationChart = null;
+            }
+            
+            // Update metrics
+            document.getElementById('serviceRate').textContent = `${metrics.serviceRate}%`;
+            document.getElementById('systemEfficiency').textContent = `${metrics.systemEfficiency}%`;
+            document.getElementById('throughput').textContent = metrics.throughput;
+            document.getElementById('totalTime').textContent = `${metrics.totalTime}s`;
+            document.getElementById('fastModeTime').textContent = `${metrics.fastModeTime}s`;
+            document.getElementById('adaptivePercentage').textContent = `${metrics.adaptivePercentage}%`;
+            document.getElementById('changeFrequency').textContent = `${metrics.changeFrequency}/min`;
+            document.getElementById('improvement').textContent = `${metrics.improvement}%`;
+            document.getElementById('rejectionReduction').textContent = `${metrics.rejectionReduction}%`;
+            document.getElementById('efficiencyGain').textContent = `${metrics.efficiencyGain}%`;
+            document.getElementById('avgWaitTime').textContent = `${metrics.avgWaitTime}s`;
+            document.getElementById('responseTime').textContent = `${metrics.responseTime}s`;
+            
+            // Update performance indicator
+            const performanceIndicator = document.getElementById('performanceIndicator');
+            const performanceIcon = performanceIndicator.querySelector('.performance-icon');
+            const performanceText = performanceIndicator.querySelector('.performance-text');
+            
+            performanceIndicator.className = `performance-indicator ${performance.level}`;
+            performanceIcon.textContent = performance.icon;
+            performanceText.textContent = performance.text;
+            
+            // Update summary
+            document.getElementById('resultsSummary').textContent = 
+                `Análise de ${state.stats.served + state.stats.rejected} pacotes finalizada. Taxa de atendimento: ${metrics.serviceRate}%`;
+            
+            // Create charts
+            createComparisonChart(comparison);
+            createUtilizationChart(comparison);
+            
+            // Show dashboard with a small delay to ensure charts are rendered
+            setTimeout(() => {
+                DOM.resultsDashboard.classList.add('active');
+                console.log('Dashboard displayed with class active:', DOM.resultsDashboard.classList.contains('active'));
+            }, 100);
+        }
+
+        function createComparisonChart(comparison) {
+            const ctx = DOM.comparisonChart.getContext('2d');
+            if (comparisonChart) {
+                comparisonChart.destroy();
+                comparisonChart = null;
+            }
+            comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pacotes Atendidos', 'Pacotes Rejeitados', 'Tempo Médio Fila (s)'],
+                    datasets: [
+                        {
+                            label: 'Sistema Adaptativo',
+                            data: [comparison.adaptive.served, comparison.adaptive.rejected, parseFloat(comparison.adaptive.avgWaitTime)],
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5
+                        },
+                        {
+                            label: 'Sistema Fixo',
+                            data: [comparison.fixed.served, comparison.fixed.rejected, parseFloat(comparison.fixed.avgWaitTime)],
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: 'white', font: { family: "'Inter', sans-serif" } }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { color: 'white' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' }
+                        },
+                        x: { 
+                            ticks: { color: 'white' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createUtilizationChart(comparison) {
+            const ctx = DOM.utilizationChart.getContext('2d');
+            if (utilizationChart) {
+                utilizationChart.destroy();
+                utilizationChart = null;
+            }
+            utilizationChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Servidor 1', 'Servidor 2', 'Tempo Ocioso'],
+                    datasets: [{
+                        data: [
+                            parseFloat(comparison.adaptive.utilS1),
+                            parseFloat(comparison.adaptive.utilS2),
+                            100 - parseFloat(comparison.adaptive.utilS1) - parseFloat(comparison.adaptive.utilS2)
+                        ],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(156, 163, 175, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(156, 163, 175, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'white', font: { family: "'Inter', sans-serif" } }
+                        }
+                    }
+                }
+            });
+        }
+        
+        /* ==================== INICIALIZAÇÃO E CONFIGURAÇÃO FINAL ==================== */
+        
+        // Event listeners para cartões de cenário
+        DOM.scenarioCards.forEach(card => {
+            const btn = card.querySelector('.scenario-btn');
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const scenarioKey = card.getAttribute('data-scenario');
+                applyScenario(scenarioKey);
+            };
+            
+            card.onclick = () => {
+                const scenarioKey = card.getAttribute('data-scenario');
+                applyScenario(scenarioKey);
+            };
+        });
+
+        // Inicializa com primeiro cenário quando página carrega
+        document.addEventListener('DOMContentLoaded', () => {
+            applyScenario('low-load');
+        });
+        
+        // Inicialização inicial do estado
+        resetState();
+
+        /**
+         * Anima rejeição de um pacote quando a fila está cheia
+         * @param {Object} client - Cliente que foi rejeitado
+         */
+        function animateRejection(client) {
+            const packetEl = packetElements.get(client.id);
+            if (!packetEl) return;
+            
+            // Marca pacote como rejeitado e adiciona classe de animação
+            packetEl.classList.add('rejected');
+            
+            // Mostra zona de rejeição
+            DOM.rejectionZone.classList.add('active');
+            
+            // Anima pacote para zona de rejeição (canto superior direito)
+            setTimeout(() => {
+                packetEl.style.left = '85%';
+                packetEl.style.top = '15%';
+            }, 100);
+            
+            // Remove pacote e esconde zona de rejeição após animação
+            setTimeout(() => {
+                packetEl.remove();
+                packetElements.delete(client.id);
+                DOM.rejectionZone.classList.remove('active');
+            }, 800);
+        }
+    </script>
+</body>
+</html>
